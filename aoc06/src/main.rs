@@ -1,4 +1,7 @@
-use std::{collections::HashSet, fmt::{Display, Write}};
+use std::{
+    collections::HashSet,
+    fmt::{Display, Write},
+};
 
 trait Map {
     fn rows(&self) -> i32;
@@ -150,7 +153,8 @@ impl MapState {
                         map_line.push(MapTile::Empty);
                         guard.row = row as i32;
                         guard.col = col as i32;
-                        guard.orientation = Orientation::try_from(tile).expect("Failed to parse orientation");
+                        guard.orientation =
+                            Orientation::try_from(tile).expect("Failed to parse orientation");
                     }
                     _ => map_line.push(MapTile::try_from(tile).expect("Failed to parse map tile")),
                 }
