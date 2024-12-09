@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, fmt::{Display, Write}};
 
 trait Map {
     fn rows(&self) -> i32;
@@ -37,19 +37,24 @@ enum MapTile {
     Blocked,
 }
 
-impl MapTile {
-    fn from_char(c: char) -> MapTile {
-        match c {
-            '.' => Self::Empty,
-            '#' => Self::Blocked,
-            _ => panic!(),
+impl TryFrom<char> for MapTile {
+    type Error = char;
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        match value {
+            '.' => Ok(Self::Empty),
+            '#' => Ok(Self::Blocked),
+            _ => Err(value),
         }
     }
-    fn as_char(&self) -> char {
-        match &self {
+}
+
+impl Display for MapTile {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_char(match &self {
             MapTile::Empty => '.',
             MapTile::Blocked => '#',
-        }
+        })
     }
 }
 
@@ -96,22 +101,30 @@ impl Orientation {
             Orientation::Left => Self::Up,
         }
     }
-    fn from_char(c: char) -> Orientation {
-        match c {
-            '^' => Self::Up,
-            '>' => Self::Right,
-            'v' => Self::Down,
-            '<' => Self::Left,
-            _ => panic!(),
+}
+
+impl TryFrom<char> for Orientation {
+    type Error = char;
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        match value {
+            '^' => Ok(Self::Up),
+            '>' => Ok(Self::Right),
+            'v' => Ok(Self::Down),
+            '<' => Ok(Self::Left),
+            _ => Err(value),
         }
     }
-    fn as_char(&self) -> char {
-        match &self {
+}
+
+impl Display for Orientation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_char(match &self {
             Orientation::Up => '^',
             Orientation::Right => '>',
             Orientation::Down => 'v',
             Orientation::Left => '<',
-        }
+        })
     }
 }
 
@@ -122,7 +135,7 @@ struct MapState {
 }
 
 impl MapState {
-    fn parse(lines: &Vec<String>) -> MapState {
+    fn parse(lines: &[String]) -> MapState {
         let mut map = Vec::new();
         let mut guard = Guard {
             row: 0,
@@ -137,27 +150,15 @@ impl MapState {
                         map_line.push(MapTile::Empty);
                         guard.row = row as i32;
                         guard.col = col as i32;
-                        guard.orientation = Orientation::from_char(tile);
+                        guard.orientation = Orientation::try_from(tile).expect("Failed to parse orientation");
                     }
-                    _ => map_line.push(MapTile::from_char(tile)),
+                    _ => map_line.push(MapTile::try_from(tile).expect("Failed to parse map tile")),
                 }
             }
             map.push(map_line);
         }
 
         MapState { map, guard }
-    }
-    fn print(&self) {
-        for (row, line) in self.map.iter().enumerate() {
-            for (col, tile) in line.iter().enumerate() {
-                if self.guard.row == row as i32 && self.guard.col == col as i32 {
-                    print!("{}", self.guard.orientation.as_char());
-                } else {
-                    print!("{}", tile.as_char());
-                }
-            }
-            println!("");
-        }
     }
     fn on_map(&self) -> bool {
         self.map.on_map(self.guard.row, self.guard.col)
@@ -191,6 +192,22 @@ impl MapState {
     }
 }
 
+impl Display for MapState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for (row, line) in self.map.iter().enumerate() {
+            for (col, tile) in line.iter().enumerate() {
+                if self.guard.row == row as i32 && self.guard.col == col as i32 {
+                    self.guard.orientation.fmt(f)?;
+                } else {
+                    tile.fmt(f)?;
+                }
+            }
+            f.write_char('\n')?;
+        }
+        Ok(())
+    }
+}
+
 fn input_lines() -> Vec<String> {
     std::io::stdin()
         .lines()
@@ -200,6 +217,7 @@ fn input_lines() -> Vec<String> {
 
 fn main() {
     let fresh_map = MapState::parse(&input_lines());
+    println!("{}", fresh_map);
 
     // Part 1:
     {
