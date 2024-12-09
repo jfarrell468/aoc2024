@@ -1,29 +1,30 @@
 use std::collections::HashSet;
 
-#[derive(Debug, Clone)]
-struct Map {
-    map: Vec<Vec<MapTile>>,
-}
-
-impl Map {
-    fn rows(&self) -> i32 {
-        self.map.len() as i32
-    }
-    fn cols(&self) -> i32 {
-        // self.map[0].len()  // may panic
-        if self.map.is_empty() {
-            0
-        } else {
-            self.map[0].len() as i32 // Assume a rectangular map
-        }
-    }
+trait Map {
+    fn rows(&self) -> i32;
+    fn cols(&self) -> i32;
     fn on_map(&self, row: i32, col: i32) -> bool {
         row >= 0 && col >= 0 && row < self.rows() && col < self.cols()
     }
-    // Returns the map tile, or None if we have left the map
+    fn get(&self, row: i32, col: i32) -> Option<MapTile>;
+}
+
+impl Map for Vec<Vec<MapTile>> {
+    fn rows(&self) -> i32 {
+        self.len() as i32
+    }
+
+    fn cols(&self) -> i32 {
+        if self.is_empty() {
+            0
+        } else {
+            self[0].len() as i32 // Assume a rectangular map
+        }
+    }
+
     fn get(&self, row: i32, col: i32) -> Option<MapTile> {
         if self.on_map(row, col) {
-            Some(self.map[row as usize][col as usize].clone())
+            Some(self[row as usize][col as usize].clone())
         } else {
             None
         }
@@ -116,7 +117,7 @@ impl Orientation {
 
 #[derive(Debug, Clone)]
 struct MapState {
-    map: Map,
+    map: Vec<Vec<MapTile>>,
     guard: Guard,
 }
 
@@ -144,13 +145,10 @@ impl MapState {
             map.push(map_line);
         }
 
-        MapState {
-            map: Map { map },
-            guard,
-        }
+        MapState { map, guard }
     }
     fn print(&self) {
-        for (row, line) in self.map.map.iter().enumerate() {
+        for (row, line) in self.map.iter().enumerate() {
             for (col, tile) in line.iter().enumerate() {
                 if self.guard.row == row as i32 && self.guard.col == col as i32 {
                     print!("{}", self.guard.orientation.as_char());
@@ -216,7 +214,7 @@ fn main() {
 
     // Part 2:
     let mut loops = 0;
-    for (row, line) in fresh_map.map.map.iter().enumerate() {
+    for (row, line) in fresh_map.map.iter().enumerate() {
         println!("{}/{}", row, fresh_map.map.rows());
         for (col, tile) in line.iter().enumerate() {
             if matches!(tile, MapTile::Blocked)
@@ -225,7 +223,7 @@ fn main() {
                 continue;
             }
             let mut map_state = fresh_map.clone();
-            map_state.map.map[row][col] = MapTile::Blocked;
+            map_state.map[row][col] = MapTile::Blocked;
             if map_state.has_loop() {
                 loops += 1;
             }
