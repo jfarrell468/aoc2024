@@ -52,7 +52,7 @@ impl MapTile {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct Guard {
     row: i32,
     col: i32,
@@ -78,7 +78,7 @@ impl Guard {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum Orientation {
     Up,
     Right,
@@ -114,6 +114,7 @@ impl Orientation {
     }
 }
 
+#[derive(Debug, Clone)]
 struct MapState {
     map: Map,
     guard: Guard,
@@ -172,8 +173,23 @@ impl MapState {
     fn advance(&mut self) {
         if self.blocked() {
             self.guard.right90();
+        } else {
+            self.guard.advance();
         }
-        self.guard.advance();
+    }
+    fn has_loop(&mut self) -> bool {
+        let mut visited = HashSet::new();
+        while self.on_map() {
+            if !visited.insert(self.guard.clone()) {
+                return true;
+            }
+            if self.blocked() {
+                self.guard.right90();
+            } else {
+                self.guard.advance();
+            }
+        }
+        false
     }
 }
 
@@ -185,12 +201,35 @@ fn input_lines() -> Vec<String> {
 }
 
 fn main() {
-    let mut map_state = MapState::parse(&input_lines());
+    let fresh_map = MapState::parse(&input_lines());
+
     // Part 1:
-    let mut visited = HashSet::new();
-    while map_state.on_map() {
-        visited.insert((map_state.guard.row, map_state.guard.col));
-        map_state.advance();
+    {
+        let mut map_state = fresh_map.clone();
+        let mut visited = HashSet::new();
+        while map_state.on_map() {
+            visited.insert((map_state.guard.row, map_state.guard.col));
+            map_state.advance();
+        }
+        println!("Part 1: {}", visited.len());
     }
-    println!("visited: {}", visited.len());
+
+    // Part 2:
+    let mut loops = 0;
+    for (row, line) in fresh_map.map.map.iter().enumerate() {
+        println!("{}/{}", row, fresh_map.map.rows());
+        for (col, tile) in line.iter().enumerate() {
+            if matches!(tile, MapTile::Blocked)
+                || (fresh_map.guard.row == row as i32 && fresh_map.guard.col == col as i32)
+            {
+                continue;
+            }
+            let mut map_state = fresh_map.clone();
+            map_state.map.map[row][col] = MapTile::Blocked;
+            if map_state.has_loop() {
+                loops += 1;
+            }
+        }
+    }
+    println!("Part 2: {}", loops);
 }
